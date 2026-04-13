@@ -8,6 +8,9 @@ class ProductRepository():
             .eq("tenant_id", tenant_id)\
             .execute()
 
+    def get_products_by_tenant(self, tenant_id):
+        return supabase.table("products")
+
     def create(self, data):
         return supabase.table("products")\
             .insert(data)\

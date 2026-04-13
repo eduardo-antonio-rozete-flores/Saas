@@ -27,7 +27,8 @@ def main():
         print("2. Login")
         print("3. Crear producto")
         print("4. Listar productos")
-        print("5. Salir")
+        print("5. Buscar producto")
+        print("6. Salir")
 
         op = input("Opción: ")
 
@@ -38,8 +39,10 @@ def main():
         elif op == "3":
             product_controller.create()
         elif op == "4":
-            product_controller.list()
+            product_controller.products_by_tenant()
         elif op == "5":
+            product_controller.buscar_producto()
+        elif op == "6":
             break
 
 
