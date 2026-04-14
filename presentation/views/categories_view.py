@@ -135,7 +135,7 @@ class CategoriesView:
         )
 
         def on_save(e):
-            if is_edit:
+            if is_edit and category is not None:
                 ok = self.ctrl.update_category(category["id"], name_f.value or "")
             else:
                 ok = self.ctrl.create_category(name_f.value or "")

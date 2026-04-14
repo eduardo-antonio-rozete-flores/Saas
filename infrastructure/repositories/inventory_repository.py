@@ -36,9 +36,9 @@ class InventoryRepository:
 
     def decrement_stock(self, product_id, quantity):
         current = self.get_stock(product_id)
-        if current.data:
-            new_stock = max(0, current.data[0]["stock_actual"] - quantity)
-            return self.upsert(product_id, new_stock, current.data[0]["stock_minimo"])
+        if current.data and isinstance(current.data, list) and len(current.data) > 0:
+            new_stock = max(0, current.data[0]["stock_actual"] - quantity)  # type: ignore
+            return self.upsert(product_id, new_stock, current.data[0]["stock_minimo"])  # type: ignore
 
     def log_movement(self, product_id, movement_type, quantity, reference_id=None):
         return (

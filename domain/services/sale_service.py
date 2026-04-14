@@ -35,6 +35,9 @@ class SaleService:
             )
 
         # 1. Create sale record
+        if Session.current_user is None:
+            raise Exception("Usuario no autenticado")
+        
         sale_res = self.sale_repo.create_sale(
             {
                 "tenant_id": Session.tenant_id,

@@ -56,7 +56,7 @@ class ProductRepository:
     def count(self, tenant_id):
         return (
             supabase.table("products")
-            .select("id", count="exact")
+            .select("id", count="exact") # type: ignore
             .eq("tenant_id", tenant_id)
             .eq("is_active", True)
             .execute()

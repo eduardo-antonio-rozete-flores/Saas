@@ -147,11 +147,12 @@ class App:
         return factory()
 
     def _set_content(self, control):
-        self.page.controls.clear()
-        self.page.controls.append(
-            ft.Container(content=control, expand=True)
-        )
-        self.page.update()
+        if self.page is not None:
+            self.page.controls.clear()  # type: ignore
+            self.page.controls.append(  # type: ignore
+                ft.Container(content=control, expand=True)
+            )
+            self.page.update()  # type: ignore
 
     # ─── Notifications ────────────────────────────────────────────
     def show_snackbar(self, message: str, error: bool = False):

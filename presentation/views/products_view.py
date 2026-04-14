@@ -112,8 +112,8 @@ class ProductsView:
 
         for p in data:
             name = p.get("name", "")
-            price = float(p.get("price", 0))
-            cost = float(p.get("cost", 0))
+            price = float(p.get("price") or 0)
+            cost = float(p.get("cost") or 0)
             category = (p.get("categories") or {}).get("name", "—")
 
             row = ft.Container(
@@ -211,7 +211,7 @@ class ProductsView:
                 "sku": sku_f.value or "",
                 "category_id": cat_dd.value or None,
             }
-            if is_edit:
+            if is_edit and product is not None:
                 ok = self.product_ctrl.update_product(product["id"], data)
             else:
                 ok = self.product_ctrl.create_product(data)
