@@ -17,11 +17,17 @@ class AuthRepository:
         return supabase.auth.sign_out()
 
     def create_profile(self, user_id, tenant_id, role="admin"):
-        return (
-            supabase.table("profiles")
-            .insert({"id": user_id, "tenant_id": tenant_id, "role": role})
-            .execute()
-        )
+        try:
+            return (
+                supabase.table("profiles")
+                .insert({"id": user_id, "tenant_id": tenant_id, "role": role})
+                .execute()
+            )
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para crear perfiles de usuario")
+            raise
 
     def get_profile(self, user_id):
         return (

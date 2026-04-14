@@ -21,6 +21,7 @@ class App:
     # ─── Page setup ───────────────────────────────────────────────
     def _setup_page(self):
         self.page.title = "NexaPOS"
+        self.page.auto_scroll = True
         self.page.window_width = 1200
         self.page.window_height = 780
         self.page.window_min_width = 900

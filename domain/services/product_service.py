@@ -38,6 +38,11 @@ class ProductService:
         data["cost"] = float(data.get("cost", 0))
         data["tenant_id"] = Session.tenant_id
         data.setdefault("is_active", True)
+        
+        # Handle category_id: set to None if empty or invalid
+        category_id = data.get("category_id")
+        if not category_id or category_id == "":
+            data["category_id"] = None
 
         res = self.repo.create(data)
         if not res.data:
@@ -53,6 +58,12 @@ class ProductService:
                 data["price"] = float(data["price"])
             except (ValueError, TypeError):
                 raise ValueError("Precio inválido")
+        
+        # Handle category_id: set to None if empty or invalid
+        if "category_id" in data:
+            category_id = data.get("category_id")
+            if not category_id or category_id == "":
+                data["category_id"] = None
 
         res = self.repo.update(product_id, data)
         if not res.data:

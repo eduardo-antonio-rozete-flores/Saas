@@ -14,20 +14,42 @@ class CategoryRepository:
         )
 
     def create(self, data):
-        return supabase.table("categories").insert(data).execute()
+        # Ensure tenant_id is present for RLS policy
+        if "tenant_id" not in data or not data["tenant_id"]:
+            raise ValueError("tenant_id es requerido para crear una categoría")
+        try:
+            res = supabase.table("categories").insert(data).execute()
+            return res
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para crear categorías en este espacio de trabajo")
+            raise
 
     def update(self, category_id, data):
-        return (
-            supabase.table("categories")
-            .update(data)
-            .eq("id", category_id)
-            .execute()
-        )
+        try:
+            return (
+                supabase.table("categories")
+                .update(data)
+                .eq("id", category_id)
+                .execute()
+            )
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para actualizar esta categoría")
+            raise
 
     def delete(self, category_id):
-        return (
-            supabase.table("categories")
-            .delete()
-            .eq("id", category_id)
-            .execute()
-        )
+        try:
+            return (
+                supabase.table("categories")
+                .delete()
+                .eq("id", category_id)
+                .execute()
+            )
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para eliminar esta categoría")
+            raise

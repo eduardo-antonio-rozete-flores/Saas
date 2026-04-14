@@ -7,13 +7,37 @@ from datetime import date
 class SaleRepository:
 
     def create_sale(self, sale_data):
-        return supabase.table("sales").insert(sale_data).execute()
+        # Ensure tenant_id is present for RLS policy
+        if "tenant_id" not in sale_data or not sale_data["tenant_id"]:
+            raise ValueError("tenant_id es requerido para crear una venta")
+        try:
+            res = supabase.table("sales").insert(sale_data).execute()
+            return res
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para crear ventas en este espacio de trabajo")
+            raise
 
     def create_sale_items(self, items):
-        return supabase.table("sale_items").insert(items).execute()
+        try:
+            res = supabase.table("sale_items").insert(items).execute()
+            return res
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para crear items de venta")
+            raise
 
     def create_payment(self, payment_data):
-        return supabase.table("payments").insert(payment_data).execute()
+        try:
+            res = supabase.table("payments").insert(payment_data).execute()
+            return res
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para crear pagos")
+            raise
 
     def get_all(self, tenant_id, limit=50):
         return (

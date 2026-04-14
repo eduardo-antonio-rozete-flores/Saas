@@ -21,18 +21,24 @@ class InventoryRepository:
         )
 
     def upsert(self, product_id, stock_actual, stock_minimo=5):
-        return (
-            supabase.table("inventory")
-            .upsert(
-                {
-                    "product_id": product_id,
-                    "stock_actual": stock_actual,
-                    "stock_minimo": stock_minimo,
-                },
-                on_conflict="product_id",
+        try:
+            return (
+                supabase.table("inventory")
+                .upsert(
+                    {
+                        "product_id": product_id,
+                        "stock_actual": stock_actual,
+                        "stock_minimo": stock_minimo,
+                    },
+                    on_conflict="product_id",
+                )
+                .execute()
             )
-            .execute()
-        )
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para actualizar el inventario")
+            raise
 
     def decrement_stock(self, product_id, quantity):
         current = self.get_stock(product_id)
@@ -41,15 +47,21 @@ class InventoryRepository:
             return self.upsert(product_id, new_stock, current.data[0]["stock_minimo"])  # type: ignore
 
     def log_movement(self, product_id, movement_type, quantity, reference_id=None):
-        return (
-            supabase.table("stock_movements")
-            .insert(
-                {
-                    "product_id": product_id,
-                    "type": movement_type,
-                    "quantity": quantity,
-                    "reference_id": reference_id,
-                }
+        try:
+            return (
+                supabase.table("stock_movements")
+                .insert(
+                    {
+                        "product_id": product_id,
+                        "type": movement_type,
+                        "quantity": quantity,
+                        "reference_id": reference_id,
+                    }
+                )
+                .execute()
             )
-            .execute()
-        )
+        except Exception as e:
+            error_msg = str(e)
+            if "row level security" in error_msg.lower():
+                raise Exception("No tienes permisos para registrar movimientos de inventario")
+            raise
