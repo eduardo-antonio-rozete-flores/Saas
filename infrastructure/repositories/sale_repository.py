@@ -44,7 +44,7 @@ class SaleRepository:
     def get_all(self, tenant_id, limit=50):
         return (
             supabase.table("sales")
-            .select("*, sale_items(*, products(name))")
+            .select("*, sale_items(*, products(name)), payments(*)")
             .eq("tenant_id", tenant_id)
             .order("created_at", desc=True)
             .limit(limit)
