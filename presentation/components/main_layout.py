@@ -1,4 +1,8 @@
 # presentation/components/main_layout.py
+#
+# CAMBIO:
+# Se añadió "analytics" a NAV_ITEMS con el ícono ANALYTICS_ROUNDED.
+# Posición: después de "Ventas" → flujo lógico: vender → ver resultados.
 
 import flet as ft
 from presentation.theme import AppTheme
@@ -13,17 +17,17 @@ class MainLayout:
         ("products",   ft.icons.INVENTORY_2_ROUNDED,    "Productos"),
         ("categories", ft.icons.CATEGORY_ROUNDED,       "Categorías"),
         ("sales",      ft.icons.RECEIPT_LONG_ROUNDED,   "Ventas"),
+        ("analytics",  ft.icons.ANALYTICS_ROUNDED,      "Analytics"),   # NUEVO
     ]
 
     def __init__(self, page, colors, is_dark, current_route, content_view, app):
-        self.page = page
-        self.colors = colors
-        self.is_dark = is_dark
+        self.page          = page
+        self.colors        = colors
+        self.is_dark       = is_dark
         self.current_route = current_route
-        self.content_view = content_view
-        self.app = app
+        self.content_view  = content_view
+        self.app           = app
 
-    # ─────────────────────────────────────────────────────────────
     def build(self):
         return ft.Row(
             [
@@ -73,30 +77,17 @@ class MainLayout:
             content=ft.Row(
                 [
                     ft.Container(
-                        content=ft.Text(
-                            "N",
-                            color="white",
-                            size=18,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        width=38,
-                        height=38,
-                        border_radius=10,
+                        content=ft.Text("N", color="white", size=18, weight=ft.FontWeight.BOLD),
+                        width=38, height=38, border_radius=10,
                         gradient=AppTheme.gradient_primary(),
                         alignment=ft.alignment.center,
                     ),
                     ft.Column(
                         [
-                            ft.Text(
-                                "NexaPOS",
-                                size=15,
-                                weight=ft.FontWeight.BOLD,
-                                color=c["text"],
-                            ),
-                            ft.Text("v1.0", size=11, color=c["text_secondary"]),
+                            ft.Text("NexaPOS", size=15, weight=ft.FontWeight.BOLD, color=c["text"]),
+                            ft.Text("v2.0", size=11, color=c["text_secondary"]),  # versión actualizada
                         ],
-                        spacing=0,
-                        tight=True,
+                        spacing=0, tight=True,
                     ),
                 ],
                 spacing=10,
@@ -105,8 +96,15 @@ class MainLayout:
         )
 
     def _nav_item(self, route: str, icon, label: str):
-        c = self.colors
+        c         = self.colors
         is_active = self.current_route == route
+
+        # Analytics tiene un color especial para diferenciarse
+        accent_color = AppTheme.SUCCESS if route == "analytics" else AppTheme.ACCENT
+        active_gradient = (
+            AppTheme.gradient_success() if route == "analytics"
+            else AppTheme.gradient_primary()
+        )
 
         icon_container = ft.Container(
             content=ft.Icon(
@@ -114,11 +112,9 @@ class MainLayout:
                 color="white" if is_active else c["text_secondary"],
                 size=18,
             ),
-            width=34,
-            height=34,
-            border_radius=9,
-            gradient=AppTheme.gradient_primary() if is_active else None,
-            bgcolor="transparent" if is_active else None,
+            width=34, height=34, border_radius=9,
+            gradient=active_gradient if is_active else None,
+            bgcolor="transparent",
             alignment=ft.alignment.center,
         )
 
@@ -137,99 +133,65 @@ class MainLayout:
             ),
             padding=ft.padding.symmetric(horizontal=10, vertical=9),
             border_radius=11,
-            bgcolor=f"{AppTheme.ACCENT}18" if is_active else "transparent",
+            bgcolor=f"{accent_color}18" if is_active else "transparent",
             on_click=lambda e, r=route: self.app.navigate_to(r),
             ink=True,
         )
 
     def _bottom_section(self):
-        c = self.colors
+        c     = self.colors
         email = Session.get_email()
         initial = Session.get_email_initial()
 
-        theme_icon = ft.icons.DARK_MODE_ROUNDED if self.is_dark else ft.icons.LIGHT_MODE_ROUNDED
+        theme_icon  = ft.icons.DARK_MODE_ROUNDED if self.is_dark else ft.icons.LIGHT_MODE_ROUNDED
         theme_label = "Modo oscuro" if self.is_dark else "Modo claro"
-
-        def on_theme_toggle(e):
-            self.app.toggle_theme()
-
-        def on_logout(e):
-            self.app.auth_controller.logout()
 
         return ft.Container(
             content=ft.Column(
                 [
-                    # Theme toggle
                     ft.Container(
                         content=ft.Row(
                             [
                                 ft.Icon(theme_icon, color=c["text_secondary"], size=16),
-                                ft.Text(
-                                    theme_label,
-                                    size=12,
-                                    color=c["text_secondary"],
-                                    expand=True,
-                                ),
+                                ft.Text(theme_label, size=12, color=c["text_secondary"], expand=True),
                                 ft.Switch(
                                     value=self.is_dark,
                                     active_color=AppTheme.ACCENT,
-                                    on_change=on_theme_toggle,
+                                    on_change=lambda e: self.app.toggle_theme(),
                                     scale=0.8,
                                 ),
                             ],
                             spacing=8,
                         ),
                     ),
-                    # Logout button
                     ft.Container(
                         content=ft.Row(
                             [
-                                ft.Icon(
-                                    ft.icons.LOGOUT_ROUNDED,
-                                    color=AppTheme.ERROR,
-                                    size=16,
-                                ),
+                                ft.Icon(ft.icons.LOGOUT_ROUNDED, color=AppTheme.ERROR, size=16),
                                 ft.Text("Cerrar sesión", color=AppTheme.ERROR, size=12),
                             ],
                             spacing=8,
                         ),
-                        on_click=on_logout,
-                        ink=True,
-                        border_radius=8,
+                        on_click=lambda e: self.app.auth_controller.logout(),
+                        ink=True, border_radius=8,
                         padding=ft.padding.symmetric(vertical=6),
                     ),
                     ft.Container(height=1, bgcolor=c["divider"]),
-                    # User info
                     ft.Row(
                         [
                             ft.Container(
-                                content=ft.Text(
-                                    initial,
-                                    color="white",
-                                    size=13,
-                                    weight=ft.FontWeight.BOLD,
-                                ),
-                                width=32,
-                                height=32,
-                                border_radius=16,
+                                content=ft.Text(initial, color="white", size=13, weight=ft.FontWeight.BOLD),
+                                width=32, height=32, border_radius=16,
                                 gradient=AppTheme.gradient_primary(),
                                 alignment=ft.alignment.center,
                             ),
                             ft.Column(
                                 [
-                                    ft.Text(
-                                        email,
-                                        size=11,
-                                        color=c["text"],
-                                        no_wrap=True,
-                                        overflow=ft.TextOverflow.ELLIPSIS,
-                                        max_lines=1,
-                                        width=130,
-                                    ),
+                                    ft.Text(email, size=11, color=c["text"], no_wrap=True,
+                                            overflow=ft.TextOverflow.ELLIPSIS, max_lines=1, width=130),
                                     ft.Text("Admin", size=10, color=c["text_secondary"]),
                                 ],
-                                spacing=0,
-                                tight=True,
+                                spacing=0, tight=True,
                             ),
                         ],
                         spacing=10,

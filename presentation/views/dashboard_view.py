@@ -1,4 +1,17 @@
 # presentation/views/dashboard_view.py
+#
+# CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR:
+#
+# 1. __init__ ahora recibe `analytics_controller` como parámetro.
+#    → Permite mostrar métricas reales (total_revenue, avg_ticket, growth_rate)
+#      sin depender de datos mock.
+#
+# 2. Se añade una cuarta stat card "Ticket Promedio" usando analytics.
+#    (Antes era "Total ventas" que era redundante con "Ventas hoy".)
+#
+# 3. Se añade un Quick Action "Ver Analytics" que navega a la vista completa.
+#
+# 4. Se mantiene todo el diseño y paleta existente (cero regresiones visuales).
 
 import flet as ft
 from presentation.theme import AppTheme
@@ -7,23 +20,35 @@ from session.session import Session
 
 class DashboardView:
 
-    def __init__(self, page, colors, is_dark, sale_controller, product_controller, app):
-        self.page = page
-        self.colors = colors
-        self.is_dark = is_dark
-        self.sale_controller = sale_controller
-        self.product_controller = product_controller
-        self.app = app
+    def __init__(self, page, colors, is_dark, sale_controller,
+                 product_controller, analytics_controller, app):  # CAMBIO: analytics_controller
+        self.page                = page
+        self.colors              = colors
+        self.is_dark             = is_dark
+        self.sale_controller     = sale_controller
+        self.product_controller  = product_controller
+        self.analytics_ctrl      = analytics_controller  # NUEVO
+        self.app                 = app
 
     def build(self):
         c = self.colors
-        stats = self.sale_controller.get_today_stats()
-        product_count = self.product_controller.get_count()
-        sales = self.sale_controller.get_sales()
-        recent = sales[:5]
 
-        today_sales = stats.get("count", 0)
+        # Datos existentes
+        stats         = self.sale_controller.get_today_stats()
+        product_count = self.product_controller.get_count()
+        sales         = self.sale_controller.get_sales()
+        recent        = sales[:5]
+        today_sales   = stats.get("count", 0)
         today_revenue = stats.get("revenue", 0.0)
+
+        # NUEVO: datos de analytics (avg ticket)
+        analytics_data = {}
+        try:
+            analytics_data = self.analytics_ctrl.get_dashboard()
+        except Exception:
+            pass  # Si analytics falla, el dashboard sigue funcionando
+
+        avg_ticket = analytics_data.get("avg_ticket", 0.0)
 
         stat_row = ft.Row(
             [
@@ -48,9 +73,10 @@ class DashboardView:
                     AppTheme.gradient_warning(),
                     c,
                 ),
+                # CAMBIO: reemplazamos "Total ventas" por "Ticket Promedio" (más útil)
                 AppTheme.stat_card(
-                    "Total ventas",
-                    len(sales),
+                    "Ticket Promedio",
+                    f"${avg_ticket:,.2f}",
                     ft.icons.ANALYTICS_ROUNDED,
                     AppTheme.gradient_info(),
                     c,
@@ -59,7 +85,7 @@ class DashboardView:
             spacing=16,
         )
 
-        recent_table = self._build_recent_sales(recent)
+        recent_table  = self._build_recent_sales(recent)
 
         quick_actions = ft.Row(
             [
@@ -80,6 +106,13 @@ class DashboardView:
                     ft.icons.RECEIPT_LONG_ROUNDED,
                     AppTheme.gradient_info(),
                     lambda e: self.app.navigate_to("sales"),
+                ),
+                # NUEVO: acceso directo a Analytics
+                self._quick_action(
+                    "Analytics",
+                    ft.icons.ANALYTICS_ROUNDED,
+                    AppTheme.gradient_warning(),
+                    lambda e: self.app.navigate_to("analytics"),
                 ),
             ],
             spacing=16,
@@ -136,9 +169,9 @@ class DashboardView:
 
         rows = []
         for sale in sales:
-            total = float(sale.get("total", 0))
+            total   = float(sale.get("total", 0))
             created = str(sale.get("created_at", ""))[:16].replace("T", " ")
-            status = sale.get("status", "completed")
+            status  = sale.get("status", "completed")
             status_color = AppTheme.SUCCESS if status == "completed" else AppTheme.WARNING
 
             rows.append(
@@ -146,9 +179,7 @@ class DashboardView:
                     cells=[
                         ft.DataCell(ft.Text(str(sale.get("id", ""))[:8] + "...", size=12, color=c["text"])),
                         ft.DataCell(ft.Text(created, size=12, color=c["text"])),
-                        ft.DataCell(
-                            ft.Text(f"${total:,.2f}", size=13, weight=ft.FontWeight.W_600, color=c["text"])
-                        ),
+                        ft.DataCell(ft.Text(f"${total:,.2f}", size=13, weight=ft.FontWeight.W_600, color=c["text"])),
                         ft.DataCell(
                             ft.Container(
                                 content=ft.Text(status, size=11, color="white"),
@@ -163,9 +194,9 @@ class DashboardView:
 
         table = ft.DataTable(
             columns=[
-                ft.DataColumn(ft.Text("ID", size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
-                ft.DataColumn(ft.Text("Fecha", size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
-                ft.DataColumn(ft.Text("Total", size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
+                ft.DataColumn(ft.Text("ID",     size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
+                ft.DataColumn(ft.Text("Fecha",  size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
+                ft.DataColumn(ft.Text("Total",  size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
                 ft.DataColumn(ft.Text("Estado", size=12, color=c["text_secondary"], weight=ft.FontWeight.W_600)),
             ],
             rows=rows,
@@ -191,9 +222,7 @@ class DashboardView:
                 [
                     ft.Container(
                         content=ft.Icon(icon, color="white", size=28),
-                        width=56,
-                        height=56,
-                        border_radius=16,
+                        width=56, height=56, border_radius=16,
                         gradient=gradient,
                         alignment=ft.alignment.center,
                     ),
