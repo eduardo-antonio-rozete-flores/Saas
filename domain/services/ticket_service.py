@@ -173,6 +173,7 @@ class TicketService:
         """
         Construye el PDF físico usando fpdf2.
         Formato tipo ticket de caja: 80mm de ancho (estándar impresoras POS).
+        Compatible con fpdf2 >= 2.5.0 (sin new_x/new_y).
         """
         pdf = FPDF(unit="mm", format=(80, 200))
         pdf.add_page()
@@ -180,11 +181,14 @@ class TicketService:
 
         # --- Encabezado ---
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 8, "NexaPOS", align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, "NexaPOS", align="C")
+        pdf.ln()
 
         pdf.set_font("Helvetica", size=8)
-        pdf.cell(0, 5, f"Folio: {ticket['folio']}", align="C", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 5, f"Fecha: {ticket['generated_at']}", align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, f"Folio: {ticket['folio']}", align="C")
+        pdf.ln()
+        pdf.cell(0, 5, f"Fecha: {ticket['generated_at']}", align="C")
+        pdf.ln()
 
         pdf.ln(3)
         pdf.set_draw_color(180, 180, 180)
@@ -193,18 +197,20 @@ class TicketService:
 
         # --- Items ---
         pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(40, 5, "Producto", new_x="NEXT")
-        pdf.cell(10, 5, "Cant", align="C", new_x="NEXT")
-        pdf.cell(20, 5, "Precio", align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(40, 5, "Producto")
+        pdf.cell(10, 5, "Cant", align="C")
+        pdf.cell(20, 5, "Precio", align="R")
+        pdf.ln()
 
         pdf.set_font("Helvetica", size=8)
         for item in ticket.get("items", []):
             name  = str(item.get("name", ""))[:22]
             qty   = int(item.get("qty", 1))
             price = float(item.get("price", 0))
-            pdf.cell(40, 5, name, new_x="NEXT")
-            pdf.cell(10, 5, str(qty), align="C", new_x="NEXT")
-            pdf.cell(20, 5, f"${price:.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(40, 5, name)
+            pdf.cell(10, 5, str(qty), align="C")
+            pdf.cell(20, 5, f"${price:.2f}", align="R")
+            pdf.ln()
 
         pdf.ln(2)
         pdf.line(5, pdf.get_y(), 75, pdf.get_y())
@@ -212,20 +218,23 @@ class TicketService:
 
         # --- Totales ---
         pdf.set_font("Helvetica", size=9)
-        pdf.cell(50, 5, "Subtotal:", new_x="NEXT")
-        pdf.cell(20, 5, f"${ticket['subtotal']:.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(50, 5, "Subtotal:")
+        pdf.cell(20, 5, f"${ticket['subtotal']:.2f}", align="R")
+        pdf.ln()
 
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(50, 6, "TOTAL:", new_x="NEXT")
-        pdf.cell(20, 6, f"${ticket['total']:.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(50, 6, "TOTAL:")
+        pdf.cell(20, 6, f"${ticket['total']:.2f}", align="R")
+        pdf.ln()
 
         pdf.set_font("Helvetica", size=8)
         method_label = {"cash": "Efectivo", "card": "Tarjeta", "transfer": "Transferencia"}
         method = method_label.get(ticket.get("payment_method", "cash"), ticket.get("payment_method", ""))
-        pdf.cell(0, 5, f"Pago: {method}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, f"Pago: {method}")
+        pdf.ln()
 
         pdf.ln(4)
         pdf.set_font("Helvetica", "I", 7)
-        pdf.cell(0, 4, "Gracias por su compra", align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 4, "Gracias por su compra", align="C")
 
         pdf.output(path)

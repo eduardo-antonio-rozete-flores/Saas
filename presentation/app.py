@@ -1,34 +1,32 @@
 # presentation/app.py
 #
-# CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR:
+# CAMBIOS (Fases 4, 5, 6):
 #
-# 1. _init_dependencies() ahora construye y conecta toda la cadena de
-#    dependencias de Fases 1-3:
-#      EventRepository → EventService
-#      AnalyticsRepository → AnalyticsService → AnalyticsController
-#      TicketRepository → TicketService (con event_service inyectado)
+# FASE 4 — Código de Barras:
+#   • product_controller expone find_by_barcode() usado en pos_view
+#   • No cambia el DI — ProductService ya tiene el método
 #
-# 2. SaleService ahora recibe event_service → emite sale_created en cada venta.
+# FASE 5 — Inventario Inteligente:
+#   • InventoryService inyectado con inventory_repo + event_service
+#   • InventoryController construido y expuesto como self.inventory_controller
+#   • SaleService ahora recibe inventory_service (en vez del repo directo)
+#   • has_low_stock se consulta en _render() para pasarlo a MainLayout
+#   • Nueva ruta "inventory" → InventoryView
 #
-# 3. Se exponen self.analytics_controller y self.ticket_service para que
-#    las vistas (dashboard_view, analytics_view, pos_view) los consuman.
+# FASE 6 — Recargas Electrónicas:
+#   • RechargeService construido con event_service inyectado
+#   • RechargeController expuesto como self.recharge_controller
+#   • PosView recibe recharge_controller (opcional — degradación elegante)
 #
-# 4. _build_content_view() agrega la ruta "analytics" → AnalyticsView.
-#
-# 5. _render() agrega la importación lazy de AnalyticsView.
-#
-# PRINCIPIO: este archivo es el único "Composition Root" de la app.
-# Ningún servicio/controlador crea sus propias dependencias.
+# PRINCIPIO (mantenido):
+#   Este archivo es el ÚNICO Composition Root.
+#   Ningún servicio ni vista crea sus propias dependencias.
 
 import flet as ft
 from presentation.theme import AppTheme
 
 
 class App:
-    """
-    Orquestador principal de la aplicación.
-    Gestiona navegación, tema e inyección de dependencias.
-    """
 
     def __init__(self, page: ft.Page):
         self.page          = page
@@ -40,94 +38,109 @@ class App:
 
     # ─── Page setup ───────────────────────────────────────────────
     def _setup_page(self):
-        self.page.title          = "NexaPOS"
-        self.page.auto_scroll    = True
-        self.page.window_width   = 1200
-        self.page.window_height  = 780
-        self.page.window_min_width  = 900
-        self.page.window_min_height = 600
+        self.page.title         = "NexaPOS"
+        self.page.auto_scroll   = True
+        self.page.window_width  = 1280
+        self.page.window_height = 800
+        self.page.window_min_width  = 960
+        self.page.window_min_height = 640
         self.page.window_center()
         self.page.theme_mode = ft.ThemeMode.DARK
-        self.page.theme      = ft.Theme(color_scheme_seed=AppTheme.ACCENT, use_material3=True)
-        self.page.dark_theme = ft.Theme(color_scheme_seed=AppTheme.ACCENT, use_material3=True)
-        self.page.bgcolor    = AppTheme.DARK["bg"]
-        self.page.padding    = 0
-        self.page.spacing    = 0
+        self.page.theme      = ft.Theme(color_scheme_seed=AppTheme.ACCENT,
+                                        use_material3=True)
+        self.page.dark_theme = ft.Theme(color_scheme_seed=AppTheme.ACCENT,
+                                        use_material3=True)
+        self.page.bgcolor = AppTheme.DARK["bg"]
+        self.page.padding = 0
+        self.page.spacing = 0
 
-    # ─── Dependency injection (Composition Root) ─────────────────
+    # ─── Composition Root ─────────────────────────────────────────
     def _init_dependencies(self):
-        # ── Repositorios ──────────────────────────────────────────
-        from infrastructure.repositories.auth_repository       import AuthRepository
-        from infrastructure.repositories.tenant_repository     import TenantRepository
-        from infrastructure.repositories.product_repository    import ProductRepository
-        from infrastructure.repositories.category_repository   import CategoryRepository
-        from infrastructure.repositories.sale_repository       import SaleRepository
-        from infrastructure.repositories.inventory_repository  import InventoryRepository
-        from infrastructure.repositories.event_repository      import EventRepository      # Fase 1
-        from infrastructure.repositories.analytics_repository  import AnalyticsRepository  # Fase 2
-        from infrastructure.repositories.ticket_repository     import TicketRepository     # Fase 3
 
-        auth_repo       = AuthRepository()
-        tenant_repo     = TenantRepository()
-        product_repo    = ProductRepository()
-        category_repo   = CategoryRepository()
-        sale_repo       = SaleRepository()
-        inventory_repo  = InventoryRepository()
-        event_repo      = EventRepository()        # Fase 1
-        analytics_repo  = AnalyticsRepository()    # Fase 2
-        ticket_repo     = TicketRepository()       # Fase 3
+        # ── Repositorios ──────────────────────────────────────────
+        from infrastructure.repositories.auth_repository      import AuthRepository
+        from infrastructure.repositories.tenant_repository    import TenantRepository
+        from infrastructure.repositories.product_repository   import ProductRepository
+        from infrastructure.repositories.category_repository  import CategoryRepository
+        from infrastructure.repositories.sale_repository      import SaleRepository
+        from infrastructure.repositories.inventory_repository import InventoryRepository
+        from infrastructure.repositories.event_repository     import EventRepository
+        from infrastructure.repositories.analytics_repository import AnalyticsRepository
+        from infrastructure.repositories.ticket_repository    import TicketRepository
+
+        auth_repo      = AuthRepository()
+        tenant_repo    = TenantRepository()
+        product_repo   = ProductRepository()
+        category_repo  = CategoryRepository()
+        sale_repo      = SaleRepository()
+        inventory_repo = InventoryRepository()
+        event_repo     = EventRepository()
+        analytics_repo = AnalyticsRepository()
+        ticket_repo    = TicketRepository()
 
         # ── Servicios ─────────────────────────────────────────────
         from domain.services.auth_service       import AuthService
         from domain.services.product_service    import ProductService
         from domain.services.category_service   import CategoryService
+        from domain.services.event_service      import EventService
+        from domain.services.analytics_service  import AnalyticsService
+        from domain.services.ticket_service     import TicketService
+        from domain.services.inventory_service  import InventoryService   # NUEVO Fase 5
         from domain.services.sale_service       import SaleService
-        from domain.services.event_service      import EventService      # Fase 1
-        from domain.services.analytics_service  import AnalyticsService  # Fase 2
-        from domain.services.ticket_service     import TicketService     # Fase 3
+        from domain.services.recharge_service   import RechargeService    # NUEVO Fase 6
 
         auth_svc      = AuthService(auth_repo, tenant_repo)
         product_svc   = ProductService(product_repo)
         category_svc  = CategoryService(category_repo)
-        event_svc     = EventService(event_repo)                         # Fase 1 — se inyecta abajo
-        analytics_svc = AnalyticsService(analytics_repo)                 # Fase 2
+        event_svc     = EventService(event_repo)
+        analytics_svc = AnalyticsService(analytics_repo)
+        ticket_svc    = TicketService(ticket_repo=ticket_repo,
+                                      event_service=event_svc)
 
-        # CAMBIO: SaleService ahora recibe event_service para emitir sale_created
+        # NUEVO Fase 5: InventoryService con eventos para alertas de stock
+        inventory_svc = InventoryService(
+            inventory_repo=inventory_repo,
+            event_service=event_svc,
+        )
+
+        # CAMBIO Fase 5: SaleService ahora usa inventory_service
         sale_svc = SaleService(
-            sale_repo      = sale_repo,
-            inventory_repo = inventory_repo,
-            event_service  = event_svc,        # Fase 1 integración
+            sale_repo=sale_repo,
+            event_service=event_svc,
+            inventory_service=inventory_svc,       # NUEVO — reemplaza inventory_repo
         )
 
-        # Fase 3: TicketService con historial y eventos
-        ticket_svc = TicketService(
-            ticket_repo   = ticket_repo,
-            event_service = event_svc,
-        )
+        # NUEVO Fase 6: RechargeService (mock, sin recharge_repo aún)
+        recharge_svc = RechargeService(event_service=event_svc)
 
         # ── Controladores ─────────────────────────────────────────
         from application.controllers.auth_controller       import AuthController
         from application.controllers.product_controller    import ProductController
         from application.controllers.category_controller   import CategoryController
         from application.controllers.sale_controller       import SaleController
-        from application.controllers.analytics_controller  import AnalyticsController  # Fase 2
+        from application.controllers.analytics_controller  import AnalyticsController
+        from application.controllers.inventory_controller  import InventoryController  # NUEVO
+        from application.controllers.recharge_controller   import RechargeController   # NUEVO
 
         self.auth_controller      = AuthController(auth_svc, self)
         self.product_controller   = ProductController(product_svc, self)
         self.category_controller  = CategoryController(category_svc, self)
         self.sale_controller      = SaleController(sale_svc, self)
-        self.analytics_controller = AnalyticsController(analytics_svc)   # Fase 2
-        self.ticket_service       = ticket_svc                            # Fase 3 — accesible desde pos_view
+        self.analytics_controller = AnalyticsController(analytics_svc)
+        self.ticket_service       = ticket_svc
+        self.inventory_controller = InventoryController(inventory_svc, self)  # NUEVO
+        self.recharge_controller  = RechargeController(recharge_svc, self)    # NUEVO
 
-    # ─── Navigation ───────────────────────────────────────────────
+    # ─── Navegación ───────────────────────────────────────────────
     def navigate_to(self, route: str):
         self.current_route = route
         self._render(route)
 
     def toggle_theme(self):
         self.is_dark = not self.is_dark
-        self.page.theme_mode = ft.ThemeMode.DARK if self.is_dark else ft.ThemeMode.LIGHT
-        self.page.bgcolor    = self.get_colors()["bg"]
+        self.page.theme_mode = (ft.ThemeMode.DARK if self.is_dark
+                                else ft.ThemeMode.LIGHT)
+        self.page.bgcolor = self.get_colors()["bg"]
         self.page.update()
         self._render(self.current_route)
 
@@ -136,24 +149,37 @@ class App:
 
     # ─── Render ───────────────────────────────────────────────────
     def _render(self, route: str):
-        from presentation.views.login_view    import LoginView
-        from presentation.views.register_view import RegisterView
+        from presentation.views.login_view       import LoginView
+        from presentation.views.register_view    import RegisterView
         from presentation.components.main_layout import MainLayout
 
         colors = self.get_colors()
 
         if route == "login":
-            view = LoginView(self.page, colors, self.is_dark, self.auth_controller, self)
+            view = LoginView(self.page, colors, self.is_dark,
+                             self.auth_controller, self)
             self._set_content(view.build())
             return
 
         if route == "register":
-            view = RegisterView(self.page, colors, self.is_dark, self.auth_controller, self)
+            view = RegisterView(self.page, colors, self.is_dark,
+                                self.auth_controller, self)
             self._set_content(view.build())
             return
 
+        # NUEVO Fase 5: consultar alertas para sidebar
+        has_low_stock = False
+        try:
+            has_low_stock = self.inventory_controller.has_low_stock()
+        except Exception:
+            pass
+
         content_view = self._build_content_view(route, colors)
-        layout       = MainLayout(self.page, colors, self.is_dark, route, content_view, self)
+        layout       = MainLayout(
+            self.page, colors, self.is_dark, route,
+            content_view, self,
+            has_low_stock=has_low_stock,             # NUEVO
+        )
         self._set_content(layout.build())
 
     def _build_content_view(self, route: str, colors: dict):
@@ -162,22 +188,29 @@ class App:
         from presentation.views.products_view   import ProductsView
         from presentation.views.categories_view import CategoriesView
         from presentation.views.sales_view      import SalesView
-        from presentation.views.analytics_view  import AnalyticsView   # NUEVO Fase 2
+        from presentation.views.analytics_view  import AnalyticsView
+        from presentation.views.inventory_view  import InventoryView   # NUEVO Fase 5
 
         views = {
             "dashboard": lambda: DashboardView(
                 self.page, colors, self.is_dark,
                 self.sale_controller, self.product_controller,
-                self.analytics_controller, self,               # CAMBIO: analytics_controller añadido
+                self.analytics_controller,
+                self.inventory_controller,      # NUEVO: para banner de alertas
             ),
             "pos": lambda: PosView(
                 self.page, colors, self.is_dark,
                 self.sale_controller, self.product_controller,
-                self.ticket_service, self,                     # CAMBIO: ticket_service añadido
+                self.ticket_service, self,
+                recharge_controller=self.recharge_controller,  # NUEVO Fase 6
             ),
             "products": lambda: ProductsView(
                 self.page, colors, self.is_dark,
                 self.product_controller, self.category_controller, self,
+            ),
+            "inventory": lambda: InventoryView(    # NUEVO Fase 5
+                self.page, colors, self.is_dark,
+                self.inventory_controller, self,
             ),
             "categories": lambda: CategoriesView(
                 self.page, colors, self.is_dark,
@@ -187,7 +220,6 @@ class App:
                 self.page, colors, self.is_dark,
                 self.sale_controller, self,
             ),
-            # NUEVO Fase 2
             "analytics": lambda: AnalyticsView(
                 self.page, colors, self.is_dark,
                 self.analytics_controller, self,
@@ -197,28 +229,22 @@ class App:
         return factory()
 
     def _set_content(self, control):
-        if self.page is not None:
-            self.page.controls.clear()    # type: ignore
-            self.page.controls.append(    # type: ignore
-                ft.Container(content=control, expand=True)
-            )
-            self.page.update()            # type: ignore
+        self.page.controls.clear()   # type: ignore
+        self.page.controls.append(   # type: ignore
+            ft.Container(content=control, expand=True)
+        )
+        self.page.update()           # type: ignore
 
-    # ─── Notifications ────────────────────────────────────────────
+    # ─── Notificaciones ───────────────────────────────────────────
     def show_snackbar(self, message: str, error: bool = False):
         icon  = ft.icons.ERROR_ROUNDED if error else ft.icons.CHECK_CIRCLE_ROUNDED
         color = AppTheme.ERROR if error else AppTheme.SUCCESS
-
         self.page.snack_bar = ft.SnackBar(
-            content=ft.Row(
-                [
-                    ft.Icon(icon, color="white", size=18),
-                    ft.Text(message, color="white", size=13, expand=True),
-                ],
-                spacing=10,
-            ),
-            bgcolor=color,
-            duration=3000,
+            content=ft.Row([
+                ft.Icon(icon, color="white", size=18),
+                ft.Text(message, color="white", size=13, expand=True),
+            ], spacing=10),
+            bgcolor=color, duration=3000,
             behavior=ft.SnackBarBehavior.FLOATING,
         )
         self.page.snack_bar.open = True

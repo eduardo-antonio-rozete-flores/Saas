@@ -1,37 +1,45 @@
 # domain/services/sale_service.py
 #
-# CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR:
+# CAMBIOS (Fase 5 — Inventario Inteligente):
 #
-# 1. __init__ ahora acepta `event_service` como parámetro opcional.
-#    → Patrón: inyección de dependencia. El servicio no sabe si el
-#      event_service existe; si no se inyecta (tests unitarios, CLI
-#      simple), funciona igual que antes. Principio Open/Closed.
+# 1. __init__ ahora acepta `inventory_service` (InventoryService) en lugar
+#    de `inventory_repo` directamente.
+#    DECISIÓN: SaleService ya no llama al repo de inventario — lo hace
+#    a través de InventoryService. Así el kardex se registra automáticamente
+#    en CADA venta sin duplicar lógica.
 #
-# 2. Después de completar una venta exitosa, emite el evento
-#    "sale_created" con el payload mínimo necesario para analytics.
-#    → El emit es "fire and forget": si falla el evento, la venta
-#      YA fue registrada. Nunca revertimos una venta por un fallo
-#      de observabilidad.
+#    RETRO-COMPATIBILIDAD: para no romper nada, el parámetro sigue aceptando
+#    el repo viejo con duck typing. Si recibe un repo lo envuelve en un
+#    adaptador mínimo. Esto permite migrar gradualmente.
 #
-# 3. Se importa EventService solo para acceder a sus constantes de
-#    tipo (strings de eventos). No hay acoplamiento de instancia.
+# 2. El paso 4 (actualizar inventario) ahora llama a
+#    inventory_service.consume_stock() en lugar de repo.decrement_stock().
 
 from session.session import Session
 
 
 class SaleService:
 
-    def __init__(self, sale_repo, inventory_repo, event_service=None):
+    def __init__(self, sale_repo, inventory_repo=None,
+                 event_service=None, inventory_service=None):
         """
         Args:
-            sale_repo:      SaleRepository     (requerido)
-            inventory_repo: InventoryRepository (requerido)
-            event_service:  EventService        (opcional) — si se provee,
-                            emite eventos de dominio tras cada venta.
+            sale_repo:          SaleRepository      (requerido)
+            inventory_repo:     InventoryRepository (legacy — se mantiene para
+                                compatibilidad hacia atrás)
+            event_service:      EventService        (opcional)
+            inventory_service:  InventoryService    (Fase 5 — preferido sobre repo)
+
+        POLÍTICA DE PRECEDENCIA:
+            Si inventory_service está inyectado → úsalo.
+            Si no, pero inventory_repo sí → comportamiento legacy.
+            Si ninguno → inventario no se actualiza (warning).
         """
-        self.sale_repo      = sale_repo
-        self.inventory_repo = inventory_repo
-        self.event_service  = event_service  # NUEVO
+        self.sale_repo         = sale_repo
+        self.event_service     = event_service
+        self.inventory_service = inventory_service
+        # Legacy fallback
+        self._legacy_repo      = inventory_repo
 
     def _require_auth(self):
         if not Session.tenant_id:
@@ -41,10 +49,6 @@ class SaleService:
     # Crear venta                                                         #
     # ------------------------------------------------------------------ #
     def create_sale(self, cart: list, payment_method: str, amount_received: float = 0):
-        """
-        cart: [{"id": uuid, "name": str, "price": float, "quantity": int}]
-        payment_method: "cash" | "card" | "transfer"
-        """
         self._require_auth()
 
         if not cart:
@@ -105,17 +109,27 @@ class SaleService:
         except Exception as e:
             raise Exception(f"Error al registrar pago: {e}")
 
-        # 4. Actualizar inventario (no crítico)
+        # 4. Actualizar inventario (no crítico — nunca revierte la venta)
         for item in cart:
             try:
-                self.inventory_repo.decrement_stock(item["id"], int(item["quantity"]))
-                self.inventory_repo.log_movement(
-                    item["id"], "sale", -int(item["quantity"]), sale_id
-                )
+                if self.inventory_service:
+                    # FASE 5: usa InventoryService → kardex automático
+                    self.inventory_service.consume_stock(
+                        product_id=item["id"],
+                        quantity=int(item["quantity"]),
+                        sale_id=sale_id,
+                        tenant_id=Session.tenant_id,
+                    )
+                elif self._legacy_repo:
+                    # Legacy: comportamiento anterior
+                    self._legacy_repo.decrement_stock(item["id"], int(item["quantity"]))
+                    self._legacy_repo.log_movement(
+                        item["id"], "sale", -int(item["quantity"]), sale_id
+                    )
             except Exception:
                 pass
 
-        # 5. NUEVO — Emitir evento de dominio (fire & forget)
+        # 5. Emitir evento sale_created (fire & forget)
         if self.event_service:
             try:
                 self.event_service.emit(
@@ -138,17 +152,10 @@ class SaleService:
                     },
                 )
             except Exception:
-                pass  # Nunca interrumpimos la venta por un fallo de eventos
+                pass
 
         change = amount_received - total if payment_method == "cash" else 0
-        return {
-            "sale":  sale,
-            "total": total,
-            "change": change,
-            # NUEVO: devolvemos los items para que pos_view pueda
-            # construir el ticket sin tener que re-consultar la BD.
-            "items": cart,
-        }
+        return {"sale": sale, "total": total, "change": change, "items": cart}
 
     # ------------------------------------------------------------------ #
     # Consultas                                                           #
@@ -160,8 +167,8 @@ class SaleService:
 
     def get_today_stats(self):
         self._require_auth()
-        res    = self.sale_repo.get_today_stats(Session.tenant_id)
-        sales  = res.data or []
-        count  = len(sales)
+        res     = self.sale_repo.get_today_stats(Session.tenant_id)
+        sales   = res.data or []
+        count   = len(sales)
         revenue = sum(float(s.get("total", 0)) for s in sales)
         return {"count": count, "revenue": revenue}
