@@ -197,6 +197,7 @@ class App:
                 self.sale_controller, self.product_controller,
                 self.analytics_controller,
                 self.inventory_controller,      # NUEVO: para banner de alertas
+                app=self,
             ),
             "pos": lambda: PosView(
                 self.page, colors, self.is_dark,

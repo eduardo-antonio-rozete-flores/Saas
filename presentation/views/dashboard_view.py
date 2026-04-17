@@ -75,19 +75,19 @@ class DashboardView:
             self._quick_action("Nueva Venta",
                                ft.icons.ADD_SHOPPING_CART_ROUNDED,
                                AppTheme.gradient_primary(),
-                               lambda e: self.app.navigate_to("pos")),
+                               lambda e: self.app.navigate_to("pos")), #type: ignore
             self._quick_action("Inventario",
                                ft.icons.WAREHOUSE_ROUNDED,
                                AppTheme.gradient_warning(),
-                               lambda e: self.app.navigate_to("inventory")),
+                               lambda e: self.app.navigate_to("inventory")), #type: ignore
             self._quick_action("Ver Ventas",
                                ft.icons.RECEIPT_LONG_ROUNDED,
                                AppTheme.gradient_info(),
-                               lambda e: self.app.navigate_to("sales")),
+                               lambda e: self.app.navigate_to("sales")), #type: ignore
             self._quick_action("Analytics",
                                ft.icons.ANALYTICS_ROUNDED,
                                AppTheme.gradient_success(),
-                               lambda e: self.app.navigate_to("analytics")),
+                               lambda e: self.app.navigate_to("analytics")), #type: ignore
         ], spacing=16)
 
         # ── Construcción de la columna principal ──
@@ -147,7 +147,7 @@ class DashboardView:
                 ft.Container(
                     content=ft.Text("Ver Inventario →", color="white", size=12,
                                     weight=ft.FontWeight.W_600),
-                    on_click=lambda e: self.app.navigate_to("inventory"),
+                    on_click=lambda e: self.app.navigate_to("inventory"), #type: ignore
                     ink=True, border_radius=8,
                     padding=ft.padding.symmetric(horizontal=12, vertical=6),
                     bgcolor="rgba(255,255,255,0.2)",
