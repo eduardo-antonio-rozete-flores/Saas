@@ -69,3 +69,15 @@ class SaleRepository:
             .single()
             .execute()
         )
+
+    def delete_sale(self, sale_id: str):
+        """
+        Elimina una venta y sus registros relacionados (cascade).
+        Usado por CreateSaleUseCase como cleanup cuando el flujo falla
+        a mitad (sale huérfana sin items ni pago).
+        """
+        try:
+            supabase.table("sale_items").delete().eq("sale_id", sale_id).execute()
+        except Exception:
+            pass
+        return supabase.table("sales").delete().eq("id", sale_id).execute()

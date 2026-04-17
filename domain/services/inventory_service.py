@@ -24,6 +24,7 @@
 #   Esto centraliza la lógica de kardex sin duplicar código.
 
 from session.session import Session
+from domain.exceptions import AuthenticationError, ValidationError
 
 
 class InventoryService:
@@ -37,9 +38,9 @@ class InventoryService:
         self.repo          = inventory_repo
         self.event_service = event_service
 
-    def _require_auth(self):
+    def _require_auth(self) -> str:
         if not Session.tenant_id:
-            raise Exception("[InventoryService] No autenticado")
+            raise AuthenticationError("No hay sesión activa")
         return Session.tenant_id
 
     # ------------------------------------------------------------------ #
@@ -97,7 +98,7 @@ class InventoryService:
 
         # Validar
         if nuevo_stock < 0:
-            raise ValueError("El stock no puede ser negativo")
+            raise ValidationError("nuevo_stock", "El stock no puede ser negativo")
 
         # Persistir
         self.repo.upsert(product_id, nuevo_stock, stock_min)

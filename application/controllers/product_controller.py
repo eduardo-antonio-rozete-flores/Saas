@@ -1,12 +1,16 @@
 # application/controllers/product_controller.py
 #
-# CAMBIOS (Fase 4 — Código de Barras):
+# CAMBIOS (refactor arquitectural):
+#   • Maneja excepciones de dominio específicas:
+#       ValidationError  → el usuario cometió un error de entrada
+#       NexaPOSError     → error de dominio conocido
+#       Exception        → error inesperado del sistema (mensaje genérico)
+#   • La firma pública es idéntica — las vistas no cambian.
 #
-# 1. find_by_barcode(barcode) — delega a ProductService.find_by_barcode().
-#    Llamado desde PosView cuando el cajero escanea un código.
-#
-# 2. generate_barcode(product_id) — helper para asignar barcode automático
-#    desde ProductsView al editar un producto sin barcode.
+# FASE 4 (Código de Barras) conservada.
+
+from domain.exceptions import ValidationError, NexaPOSError
+
 
 class ProductController:
 
@@ -28,15 +32,9 @@ class ProductController:
             self.app.show_snackbar(str(ex), error=True)
             return []
 
-    # ------------------------------------------------------------------ #
-    # NUEVO Fase 4                                                        #
-    # ------------------------------------------------------------------ #
+    # ─── Fase 4 ───────────────────────────────────────────────────
+
     def find_by_barcode(self, barcode: str) -> dict | None:
-        """
-        Busca un producto por barcode exacto.
-        Devuelve None (sin snackbar) si no se encuentra — la vista decide
-        cómo informarlo (beep, shake, mensaje inline).
-        """
         try:
             return self.service.find_by_barcode(barcode)
         except Exception as ex:
@@ -44,22 +42,26 @@ class ProductController:
             return None
 
     def generate_barcode(self, product_id: str) -> str:
-        """Genera y devuelve un barcode numérico para el producto."""
         try:
             return self.service.generate_barcode_for(product_id)
         except Exception:
             return ""
 
-    # ------------------------------------------------------------------ #
-    # CRUD                                                                #
-    # ------------------------------------------------------------------ #
+    # ─── CRUD ─────────────────────────────────────────────────────
+
     def create_product(self, data: dict) -> bool:
         try:
             self.service.create_product(data)
             self.app.show_snackbar("Producto creado exitosamente ✓")
             return True
-        except Exception as ex:
+        except ValidationError as ex:
             self.app.show_snackbar(str(ex), error=True)
+            return False
+        except NexaPOSError as ex:
+            self.app.show_snackbar(str(ex), error=True)
+            return False
+        except Exception as ex:
+            self.app.show_snackbar(f"Error inesperado: {ex}", error=True)
             return False
 
     def update_product(self, product_id: str, data: dict) -> bool:
@@ -67,8 +69,14 @@ class ProductController:
             self.service.update_product(product_id, data)
             self.app.show_snackbar("Producto actualizado ✓")
             return True
-        except Exception as ex:
+        except ValidationError as ex:
             self.app.show_snackbar(str(ex), error=True)
+            return False
+        except NexaPOSError as ex:
+            self.app.show_snackbar(str(ex), error=True)
+            return False
+        except Exception as ex:
+            self.app.show_snackbar(f"Error inesperado: {ex}", error=True)
             return False
 
     def delete_product(self, product_id: str) -> bool:

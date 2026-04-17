@@ -113,6 +113,13 @@ class App:
         # NUEVO Fase 6: RechargeService (mock, sin recharge_repo aún)
         recharge_svc = RechargeService(event_service=event_svc)
 
+        # ── Use Cases ─────────────────────────────────────────────
+        from application.use_cases.create_sale_use_case   import CreateSaleUseCase
+        from application.use_cases.register_user_use_case import RegisterUserUseCase
+
+        create_sale_use_case  = CreateSaleUseCase(sale_repo, inventory_svc, event_svc)
+        register_use_case     = RegisterUserUseCase(auth_repo, tenant_repo)
+
         # ── Controladores ─────────────────────────────────────────
         from application.controllers.auth_controller       import AuthController
         from application.controllers.product_controller    import ProductController
@@ -122,10 +129,10 @@ class App:
         from application.controllers.inventory_controller  import InventoryController  # NUEVO
         from application.controllers.recharge_controller   import RechargeController   # NUEVO
 
-        self.auth_controller      = AuthController(auth_svc, self)
+        self.auth_controller      = AuthController(auth_svc, self, register_use_case)
         self.product_controller   = ProductController(product_svc, self)
         self.category_controller  = CategoryController(category_svc, self)
-        self.sale_controller      = SaleController(sale_svc, self)
+        self.sale_controller      = SaleController(sale_svc, self, create_sale_use_case)
         self.analytics_controller = AnalyticsController(analytics_svc)
         self.ticket_service       = ticket_svc
         self.inventory_controller = InventoryController(inventory_svc, self)  # NUEVO
