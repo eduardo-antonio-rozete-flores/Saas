@@ -96,13 +96,16 @@ class CreateSaleUseCase:
             raise RepositoryError(f"Error al registrar ítems de venta: {e}") from e
 
         # ── 4. Registrar pago (con cleanup si falla) ───────────────
+        # tenant_id requerido (NOT NULL) y status indican el estado inicial del pago.
         try:
             self.sale_repo.create_payment({
-                "sale_id": sale_id,
-                "method":  request.payment_method,
-                "amount":  (request.amount_received
-                            if request.payment_method == "cash"
-                            else request.total),
+                "sale_id":   sale_id,
+                "method":    request.payment_method,
+                "amount":    (request.amount_received
+                              if request.payment_method == "cash"
+                              else request.total),
+                "tenant_id": Session.tenant_id,
+                "status":    "completed",
             })
         except Exception as e:
             self._cleanup_sale(sale_id)
