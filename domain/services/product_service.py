@@ -75,6 +75,7 @@ class ProductService:
             price=price,
             cost=cost,
             barcode=data.get("barcode"),
+            barcode_type=data.get("barcode_type"),
             category_id=data.get("category_id"),
             is_active=data.get("is_active", True),
         )
@@ -99,6 +100,7 @@ class ProductService:
             price=price,
             cost=cost,
             barcode=data.get("barcode"),
+            barcode_type=data.get("barcode_type"),
             category_id=data.get("category_id"),
             is_active=data.get("is_active"),
         )

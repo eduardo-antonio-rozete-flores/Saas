@@ -54,7 +54,7 @@ class SaleService:
         if not cart:
             raise ValueError("El carrito está vacío")
 
-        valid_methods = ("cash", "card", "transfer")
+        valid_methods = ("cash", "card", "transfer", "electronic")
         if payment_method not in valid_methods:
             raise ValueError("Método de pago inválido")
 
@@ -98,12 +98,15 @@ class SaleService:
             raise Exception(f"Error al registrar items de venta: {e}")
 
         # 3. Registro de pago
+        # tenant_id requerido (NOT NULL) y status indican el estado inicial del pago.
         try:
             self.sale_repo.create_payment(
                 {
-                    "sale_id": sale_id,
-                    "method":  payment_method,
-                    "amount":  amount_received if payment_method == "cash" else total,
+                    "sale_id":   sale_id,
+                    "method":    payment_method,
+                    "amount":    amount_received if payment_method == "cash" else total,
+                    "tenant_id": Session.tenant_id,
+                    "status":    "completed",
                 }
             )
         except Exception as e:

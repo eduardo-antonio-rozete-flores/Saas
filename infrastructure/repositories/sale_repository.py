@@ -72,10 +72,15 @@ class SaleRepository:
 
     def delete_sale(self, sale_id: str):
         """
-        Elimina una venta y sus registros relacionados (cascade).
-        Usado por CreateSaleUseCase como cleanup cuando el flujo falla
-        a mitad (sale huérfana sin items ni pago).
+        Elimina una venta y sus registros relacionados.
+        Orden obligatorio: payments → sale_items → sales.
+        La FK payments→sales es RESTRICT: borrar la venta con pagos activos
+        lanza error en Postgres, por eso se eliminan primero.
         """
+        try:
+            supabase.table("payments").delete().eq("sale_id", sale_id).execute()
+        except Exception:
+            pass
         try:
             supabase.table("sale_items").delete().eq("sale_id", sale_id).execute()
         except Exception:
