@@ -23,6 +23,8 @@
 from __future__ import annotations
 
 import flet as ft
+from typing import List
+from flet import Control
 from presentation.theme import AppTheme
 
 
@@ -73,6 +75,9 @@ class AnalyticsView:
             bgcolor=self.colors["bg"],
         )
 
+    # --- Helpers must be defined before usage ---
+
+
     # ================================================================== #
     # KPI Cards                                                          #
     # ================================================================== #
@@ -116,7 +121,7 @@ class AnalyticsView:
                 subtitle="transacciones",
             ),
         ]
-        return ft.Row(cards, spacing=14)
+        return ft.Row([c for c in cards], spacing=14)
 
     def _kpi_card(self, title, value, icon, gradient, subtitle="", value_color=None):
         c = self.colors
@@ -310,7 +315,6 @@ class AnalyticsView:
                     ft.Container(
                         content=line_chart,
                         height=220,
-                        expand=True,
                     ),
                 ],
                 spacing=0,
@@ -434,37 +438,23 @@ class AnalyticsView:
         ]
 
         return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Icon(ft.icons.BAR_CHART_ROUNDED, color=AppTheme.SUCCESS, size=18),
-                            ft.Text(
-                                "Top Productos",
-                                size=14,
-                                weight=ft.FontWeight.W_600,
-                                color=c["text"],
-                            ),
-                        ],
-                        spacing=8,
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.BAR_CHART_ROUNDED, color=AppTheme.SUCCESS, size=18),
+                    ft.Text(
+                        "Top Productos",
+                        size=14,
+                        weight=ft.FontWeight.W_600,
+                        color=c["text"],
                     ),
-                    ft.Container(height=16),
-                    ft.Row(
-                        [
-                            ft.Container(content=bar_chart, expand=3, height=240),
-                            ft.Container(width=24),
-                            ft.Column(
-                                legend_rows,
-                                spacing=10,
-                                expand=2,
-                                scroll=ft.ScrollMode.AUTO,
-                            ),
-                        ],
-                        vertical_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                ],
-                spacing=0,
-            ),
+                ], spacing=8),
+                ft.Container(height=16),
+                ft.Row([
+                    ft.Container(content=bar_chart, expand=3, height=240),
+                    ft.Container(width=24),
+                    ft.Column([r for r in legend_rows], spacing=10, expand=2, scroll=ft.ScrollMode.AUTO),
+                ], vertical_alignment=ft.CrossAxisAlignment.START),
+            ], spacing=0),
             padding=ft.padding.all(20),
             bgcolor=c["card"],
             border_radius=16,

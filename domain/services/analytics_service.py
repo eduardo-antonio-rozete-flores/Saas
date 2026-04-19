@@ -63,7 +63,8 @@ class AnalyticsService:
         today_res   = self.repo.sales_count_today(tenant_id)
 
         sales_by_day  = sales_res.data or []
-        avg_ticket    = float(avg_res.data or 0)
+        _avg_raw      = avg_res.data
+        avg_ticket    = float(_avg_raw[0] if isinstance(_avg_raw, list) else (_avg_raw or 0))
         top_products  = top_res.data or []
         revenue_rows  = revenue_res.data or []
         sales_today   = today_res.count if today_res.count is not None else 0
