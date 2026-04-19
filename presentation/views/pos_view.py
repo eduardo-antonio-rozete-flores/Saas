@@ -194,13 +194,13 @@ class PosView:
             phone  = phone_field.value or ""
 
             if not op_id:
-                self.app.show_snackbar("Selecciona una operadora", error=True)
+                self.app.show_snackbar("Selecciona una operadora", error=True) #type: ignore
                 return
             if not amount:
-                self.app.show_snackbar("Selecciona un monto", error=True)
+                self.app.show_snackbar("Selecciona un monto", error=True) #type: ignore
                 return
             if not phone:
-                self.app.show_snackbar("Ingresa el número de teléfono", error=True)
+                self.app.show_snackbar("Ingresa el número de teléfono", error=True) #type: ignore
                 return
 
             result = self.recharge_ctrl.process_recharge(phone, op_id, amount)
@@ -276,9 +276,9 @@ class PosView:
         product = self.product_controller.find_by_barcode(barcode)
         if product:
             self._add_to_cart(product)
-            self.app.show_snackbar(f"✓ {product.get('name', '')} agregado al carrito")
+            self.app.show_snackbar(f"✓ {product.get('name', '')} agregado al carrito")# type: ignore
         else:
-            self.app.show_snackbar(f"Código '{barcode}' no encontrado", error=True)
+            self.app.show_snackbar(f"Código '{barcode}' no encontrado", error=True) #type: ignore
 
         # Limpiar el campo para el siguiente scan
         self._barcode_field.value = ""
