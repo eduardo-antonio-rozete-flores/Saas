@@ -17,7 +17,8 @@ from domain.exceptions import (
     InsufficientPaymentError,
 )
 
-VALID_PAYMENT_METHODS = ("cash", "card", "transfer")
+# 'electronic' agregado para Fase 6 (recargas y pagos QR/CoDi)
+VALID_PAYMENT_METHODS = ("cash", "card", "transfer", "electronic")
 
 
 @dataclass
