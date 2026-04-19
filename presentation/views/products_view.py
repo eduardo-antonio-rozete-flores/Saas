@@ -182,11 +182,20 @@ class ProductsView:
         is_edit = product is not None
         title_text = "Editar Producto" if is_edit else "Nuevo Producto"
 
-        name_f = AppTheme.make_text_field("Nombre *", colors=c, value=product.get("name", "") if is_edit else "")
-        price_f = AppTheme.make_text_field("Precio *", colors=c, value=str(product.get("price", "")) if is_edit else "")
-        cost_f = AppTheme.make_text_field("Costo", colors=c, value=str(product.get("cost", "")) if is_edit else "")
-        sku_f = AppTheme.make_text_field("SKU", colors=c, value=product.get("sku", "") if is_edit else "")
+        name_f  = AppTheme.make_text_field("Nombre",  colors=c, value=product.get("name", "")        if is_edit else "")
+        price_f = AppTheme.make_text_field("Precio",  colors=c, value=str(product.get("price", ""))  if is_edit else "")
+        cost_f  = AppTheme.make_text_field("Costo",   colors=c, value=str(product.get("cost",  ""))  if is_edit else "")
 
+        # Campos de stock — solo visibles al crear un producto nuevo.
+        # Al editar, el stock se gestiona desde Inventario → Ajustar stock.
+        stock_f   = AppTheme.make_text_field("Stock inicial", colors=c, value="0")
+        min_stk_f = AppTheme.make_text_field("Stock mínimo",  colors=c, value="5")
+        stock_f.keyboard_type   = ft.KeyboardType.NUMBER
+        min_stk_f.keyboard_type = ft.KeyboardType.NUMBER
+        price_f.expand = True
+        cost_f.expand = True
+        stock_f.expand = True
+        min_stk_f.expand = True
         cat_options = [ft.dropdown.Option(key="", text="Sin categoría")]
         for cat in self._categories:
             cat_options.append(ft.dropdown.Option(key=cat["id"], text=cat["name"]))
@@ -203,13 +212,30 @@ class ProductsView:
             bgcolor=c["input_fill"],
         )
 
+        # Aviso cuando no hay categorías registradas
+        no_cat_notice = ft.Text(
+            "ℹ️  No tienes categorías aún. El producto se guardará sin categoría.",
+            size=11,
+            color=AppTheme.WARNING,
+            italic=True,
+        ) if not self._categories else ft.Container(height=0)
+
         def on_save(e):
+            # Validar stock manualmente antes de enviar
+            try:
+                stock_val   = int(stock_f.value   or 0) if not is_edit else 0
+                min_stk_val = int(min_stk_f.value or 5) if not is_edit else 5
+            except ValueError:
+                self.app.show_snackbar("Stock y mínimo deben ser números enteros", error=True)
+                return
+
             data = {
-                "name": name_f.value or "",
-                "price": price_f.value or "0",
-                "cost": cost_f.value or "0",
-                "sku": sku_f.value or "",
-                "category_id": cat_dd.value or None,
+                "name":          name_f.value  or "",
+                "price":         price_f.value or "0",
+                "cost":          cost_f.value  or "0",
+                "category_id":   cat_dd.value  or None,
+                "stock_inicial": stock_val,
+                "stock_minimo":  min_stk_val,
             }
             if is_edit and product is not None:
                 ok = self.product_ctrl.update_product(product["id"], data)
@@ -226,14 +252,21 @@ class ProductsView:
             dialog.open = False
             self.page.update()
 
+        # Construir lista de campos según modo (crear vs editar)
+        form_fields = [
+            name_f,
+            ft.Row([price_f, cost_f], spacing=10),
+            cat_dd,
+            no_cat_notice,
+        ]
+        if not is_edit:
+            form_fields.append(ft.Row([stock_f, min_stk_f], spacing=10))
+
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text(title_text, weight=ft.FontWeight.BOLD),
             content=ft.Container(
-                content=ft.Column(
-                    [name_f, ft.Row([price_f, cost_f], spacing=10), sku_f, cat_dd],
-                    spacing=12, tight=True,
-                ),
+                content=ft.Column(form_fields, spacing=12, tight=True),
                 width=360,
             ),
             actions=[

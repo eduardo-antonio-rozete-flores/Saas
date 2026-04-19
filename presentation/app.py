@@ -120,6 +120,13 @@ class App:
         create_sale_use_case  = CreateSaleUseCase(sale_repo, inventory_svc, event_svc)
         register_use_case     = RegisterUserUseCase(auth_repo, tenant_repo)
 
+        from application.use_cases.create_product_use_case import CreateProductUseCase
+        create_product_use_case = CreateProductUseCase(
+            product_repo=product_repo,
+            inventory_service=inventory_svc,
+            event_service=event_svc,
+        )
+
         # ── Controladores ─────────────────────────────────────────
         from application.controllers.auth_controller       import AuthController
         from application.controllers.product_controller    import ProductController
@@ -130,7 +137,7 @@ class App:
         from application.controllers.recharge_controller   import RechargeController   # NUEVO
 
         self.auth_controller      = AuthController(auth_svc, self, register_use_case)
-        self.product_controller   = ProductController(product_svc, self)
+        self.product_controller   = ProductController(product_svc, self, create_product_use_case)
         self.category_controller  = CategoryController(category_svc, self)
         self.sale_controller      = SaleController(sale_svc, self, create_sale_use_case)
         self.analytics_controller = AnalyticsController(analytics_svc)

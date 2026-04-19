@@ -8,15 +8,21 @@
 #   • La firma pública es idéntica — las vistas no cambian.
 #
 # FASE 4 (Código de Barras) conservada.
+#
+# CAMBIO (Stock inicial):
+#   • __init__ acepta create_product_use_case opcional.
+#   • create_product() usa el use case si está disponible; fallback a service.
+#     El use case es el que llama a inventory_service.initialize_stock().
 
 from domain.exceptions import ValidationError, NexaPOSError
 
 
 class ProductController:
 
-    def __init__(self, service, app):
-        self.service = service
-        self.app     = app
+    def __init__(self, service, app, create_product_use_case=None):
+        self.service          = service
+        self.app              = app
+        self._create_use_case = create_product_use_case
 
     def get_products(self):
         try:
@@ -51,7 +57,10 @@ class ProductController:
 
     def create_product(self, data: dict) -> bool:
         try:
-            self.service.create_product(data)
+            if self._create_use_case:
+                self._create_use_case.execute(data)
+            else:
+                self.service.create_product(data)
             self.app.show_snackbar("Producto creado exitosamente ✓")
             return True
         except ValidationError as ex:
