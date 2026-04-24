@@ -214,7 +214,6 @@ class InventoryView:
                             on_click=lambda e, pid=product_id, n=name,
                                             sa=stock_act, sm=stock_min:
                                 self._show_adjust_dialog(pid, n, sa, sm),
-                            style=ft.ButtonStyle(padding=ft.padding.all(4)),
                         ),
                         ft.IconButton(
                             ft.icons.HISTORY_ROUNDED,
@@ -222,7 +221,6 @@ class InventoryView:
                             tooltip="Ver kardex",
                             on_click=lambda e, pid=product_id, n=name:
                                 self._show_kardex_dialog(pid, n),
-                            style=ft.ButtonStyle(padding=ft.padding.all(4)),
                         ),
                     ], spacing=0, width=120),
                 ],
@@ -336,7 +334,7 @@ class InventoryView:
                 "ajuste":  AppTheme.WARNING,
                 "inicio":  AppTheme.ACCENT,
             }
-            TIPO_ICONS = {
+            TIPO_icons = {
                 "entrada": ft.icons.ARROW_DOWNWARD_ROUNDED,
                 "salida":  ft.icons.ARROW_UPWARD_ROUNDED,
                 "ajuste":  ft.icons.SWAP_VERT_ROUNDED,
@@ -352,7 +350,7 @@ class InventoryView:
                 fecha     = str(entry.get("created_at", ""))[:16].replace("T", " ")
                 notas     = entry.get("notas") or entry.get("referencia_tipo") or "—"
                 color     = TIPO_COLORS.get(tipo, c["text_secondary"])
-                icon      = TIPO_ICONS.get(tipo, ft.icons.CIRCLE_ROUNDED)
+                icon      = TIPO_icons.get(tipo, ft.icons.CIRCLE_ROUNDED)
 
                 kardex_rows.append(
                     ft.Container(
